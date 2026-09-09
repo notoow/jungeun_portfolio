@@ -606,13 +606,30 @@ export default function Portfolio({
   }, [motion, tilt, selected]);
   useEffect(() => {
     if (!tilt || !motion) return;
-    let baseline: number | null = null;
+    let baseline: { beta: number; gamma: number; angle: number } | null = null;
     const orient = (event: DeviceOrientationEvent) => {
       if (event.beta === null || event.gamma === null) return;
-      if (baseline === null) baseline = event.beta;
+      const angle = window.screen.orientation?.angle || 0;
+      if (baseline === null || baseline.angle !== angle)
+        baseline = { beta: event.beta, gamma: event.gamma, angle };
+      const horizontal = (event.gamma - baseline.gamma) / 22;
+      const vertical = (baseline.beta - event.beta) / 22;
+      const radians = (angle * Math.PI) / 180;
       input.current = {
-        x: Math.max(-1, Math.min(1, event.gamma / 25)),
-        y: Math.max(-1, Math.min(1, (baseline - event.beta) / 25)),
+        x: Math.max(
+          -1,
+          Math.min(
+            1,
+            horizontal * Math.cos(radians) + vertical * Math.sin(radians),
+          ),
+        ),
+        y: Math.max(
+          -1,
+          Math.min(
+            1,
+            vertical * Math.cos(radians) - horizontal * Math.sin(radians),
+          ),
+        ),
       };
     };
     window.addEventListener('deviceorientation', orient, { passive: true });
@@ -729,9 +746,9 @@ export default function Portfolio({
                   <span>big dreams.</span>
                 </h1>
                 <p className="hero-description">
-                  작은 호기심으로 만든,
+                  아가가 세상을 처음 만나듯,
                   <br />
-                  소중한 디자인들을 모았습니다.
+                  익숙한 것을 새로운 눈으로 바라봅니다.
                 </p>
                 <a className="hero-cta" href="#archive">
                   나의 작업들 만나보기 <ArrowDown size={18} />
@@ -769,9 +786,11 @@ export default function Portfolio({
                 </h2>
               </div>
               <p>
-                브랜드부터 일러스트까지.
+                색과 형태, 손끝에 닿는 작은 감각까지.
                 <br />
-                차곡차곡 쌓아온 나의 작은 세계.
+                세상을 처음 만나는 호기심으로 관찰하고,
+                <br />
+                그 발견을 브랜드와 이미지, 경험으로 만듭니다.
               </p>
             </div>
             <Tabs

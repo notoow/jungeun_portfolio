@@ -29,6 +29,7 @@ export default function ReaderOverview({
 }) {
   const [open, setOpen] = useState(false);
   const pendingJump = useRef<number | null>(null);
+  const jumpTarget = useRef<HTMLImageElement | null>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const activePreview = useRef<HTMLButtonElement>(null);
 
@@ -52,7 +53,10 @@ export default function ReaderOverview({
   return (
     <Dialog
       open={open}
-      onOpenChange={setOpen}
+      onOpenChange={(value) => {
+        if (value) jumpTarget.current = null;
+        setOpen(value);
+      }}
       onOpenChangeComplete={(isOpen) => {
         if (isOpen || pendingJump.current === null) return;
         // Wait for the dialog's scroll lock to release before moving the document.
@@ -100,9 +104,7 @@ export default function ReaderOverview({
         className={`reader-overview ${motion ? '' : 'is-still'}`}
         showCloseButton={false}
         initialFocus={activePreview}
-        finalFocus={() =>
-          pendingJump.current !== null ? false : trigger.current
-        }
+        finalFocus={() => jumpTarget.current || trigger.current}
       >
         <div className="overview-heading">
           <div>
@@ -125,6 +127,7 @@ export default function ReaderOverview({
               aria-label={`${index + 1}번째 부분으로 이동${index === active ? ', 읽는 중' : ''}`}
               onClick={() => {
                 pendingJump.current = index;
+                jumpTarget.current = section(index) || null;
                 setOpen(false);
               }}
             >
