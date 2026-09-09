@@ -19,6 +19,7 @@ import {
   Play,
   X,
   Maximize2,
+  Copy,
 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
@@ -51,6 +52,7 @@ const featured = [
 const categoryName = (id: string) =>
   categories.find((c) => c.id === id)?.label || id;
 const niceNumber = (n: number) => String(n).padStart(2, '0');
+const emailAddress = 'je_xoxo@naver.com';
 const displayImage = (image: PortfolioImage, motion: boolean) =>
   assetPath(!motion && image.poster ? image.poster : image.src);
 function subscribePreferences(callback: () => void) {
@@ -61,6 +63,42 @@ function subscribePreferences(callback: () => void) {
   queries.forEach((q) => q.addEventListener('change', callback));
   return () =>
     queries.forEach((q) => q.removeEventListener('change', callback));
+}
+
+function EmailContact() {
+  const [copyStatus, setCopyStatus] = useState('');
+  useEffect(() => {
+    if (!copyStatus) return;
+    const timer = window.setTimeout(() => setCopyStatus(''), 3000);
+    return () => window.clearTimeout(timer);
+  }, [copyStatus]);
+
+  async function copyEmail() {
+    try {
+      await navigator.clipboard.writeText(emailAddress);
+      setCopyStatus('이메일 주소를 복사했어요.');
+    } catch {
+      setCopyStatus('이메일 주소를 선택해 직접 복사해 주세요.');
+    }
+  }
+
+  return (
+    <div className="contact-block">
+      <div className="contact-link">
+        <a href={`mailto:${emailAddress}`}>{emailAddress}</a>
+        <button
+          type="button"
+          className="copy-email"
+          onClick={copyEmail}
+          aria-label="이메일 주소 복사"
+          title="이메일 주소 복사"
+        >
+          <Copy size={26} strokeWidth={1.7} aria-hidden="true" />
+        </button>
+      </div>
+      <output className="contact-feedback">{copyStatus || '\u00a0'}</output>
+    </div>
+  );
 }
 
 function ProjectCard({
@@ -846,9 +884,7 @@ export default function Portfolio({
               함께 만들어요.
             </h2>
           </div>
-          <a className="contact-link" href="mailto:je_xoxo@naver.com">
-            je_xoxo@naver.com <ArrowUpRight size={28} />
-          </a>
+          <EmailContact />
         </div>
         <div className="footer-bottom">
           <span>© {new Date().getFullYear()} jungeun park</span>

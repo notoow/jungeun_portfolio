@@ -661,6 +661,32 @@ button:disabled {
   padding: 12px 0;
   border-bottom: 1px solid #a7c1d3;
 }
+.contact-block {
+  max-width: 100%;
+}
+.copy-email {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 50%;
+  padding: 8px;
+  background: transparent;
+  color: inherit;
+}
+.copy-email:hover {
+  background: #d5e6f1;
+}
+.contact-feedback {
+  display: block;
+  min-height: 28px;
+  padding-top: 8px;
+  color: #587991;
+  font-size: 13px;
+  line-height: 1.5;
+}
 .footer-bottom {
   border-top: 1px solid #c6dbe9;
   padding-top: 24px;
