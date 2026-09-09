@@ -15,7 +15,11 @@ Both images were created with the built-in image generation tool, one request pe
 - `public/meadow/landscape.webp`: 1586 × 992, 317896 bytes.
 - `public/meadow/portrait.webp`: 941 × 1672, 244942 bytes.
 
-The render is photographic, with a small wind displacement weighted toward the foreground, an eased pointer/sensor offset and scroll zoom. It does not simulate separate flower geometry. The whole image has an opaque background; no generated alpha or color-key removal is required. A responsive picture is the fallback, and a visibility-aware frame scheduler pauses offscreen and in hidden tabs. Motion can be paused, and the initial preference follows reduced motion. The renderer also handles context loss and portrait/landscape source changes.
+The distant layer is photographic. The foreground contains independent 3D flowers: curved and ribbed radial petals, a domed center with 115 modeled florets, curved stems, and narrow leaves. Original parametric geometry is shared through instanced meshes (78 flowers on desktop, 42 when mounted on a small viewport or coarse-pointer device). Hemisphere and directional lighting, perspective, and restrained atmospheric fog give the geometry depth. No external model or texture is required for the flowers.
+
+Each stem uses a damped spring. Pointer and touch strokes are tested against the entire screen-space movement segment, so quick swipes do not skip flower heads. The stem curve, leaves and blossom stay connected as they bend, overshoot and settle. Bounded integration prevents long frames and repeated input from destabilizing the stems. Touch listeners are passive; CSS preserves native vertical scrolling and pinch zoom while allowing horizontal strokes.
+
+Scroll advances the camera into the field, opens the foreground stems to either side, then blends the meadow into the archive. This uses ordinary reversible document scrolling. Pointer and calibrated sensor input affect camera position, roll and stem lean. The original responsive picture remains the fallback. Rendering pauses offscreen and in hidden tabs, handles context loss, and limits device pixel count. The pause control and reduced-motion default show a still scene with a shorter hero.
 
 ## Exact landscape prompt
 
@@ -52,3 +56,12 @@ The sleeping-baby version is stored as the annotated remote Git tag `sleeping-ba
 - The digital filter displayed 16 works; the ice-pack detail opened with all 9 sections, and jumping to section 5 placed it below the fixed header. Returning retained the digital filter.
 - Mobile used the portrait composition, the motion control paused the scene, and the footer button copied the exact email address. No browser errors were reported in the final check.
 - Physical device orientation was not exercised; the existing permission and calibration flow is retained.
+
+## 3D interaction verification
+
+- Nine scheduler and spring tests pass, including fast strokes, spring return, 30/60/120 fps consistency, repeated-input limits and reversible scroll progression.
+- Lint, TypeScript, production build and all 61 projects / 484 media references pass validation.
+- Browser checks at 320, 390, 768, 1440 and 2560 pixels found no horizontal overflow. The 390-pixel scene was also tested with a horizontal pointer drag.
+- Desktop dragging visibly bends the nearby flowers. Native scrolling advances the camera and the second text scene. The pause control removes the interaction hint, shortens the hero and produces identical consecutive screenshots.
+- Opening the nine-section ice-pack project disposes the meadow; returning recreates a single canvas and retains the digital filter with 16 works. The final browser check reported no console errors.
+- Browser viewport checks do not emulate a physical phone. Touch hardware and sensor sensitivity still require a real-device check; the calibrated permission flow and native `pan-y pinch-zoom` gesture policy are implemented.

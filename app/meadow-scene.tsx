@@ -59,6 +59,17 @@ export default function MeadowScene({
         />
       </picture>
       <div className="meadow-canvas" ref={host} aria-hidden="true" />
+      {ready && motion && (
+        <p className="meadow-touch-hint">
+          <span className="meadow-hint-mouse">
+            마우스로 꽃을 가볍게 쓸어보세요
+          </span>
+          <span className="meadow-hint-touch">
+            꽃을 좌우로 가볍게 쓸어보세요
+          </span>
+          <small>SCROLL TO EXPLORE</small>
+        </p>
+      )}
     </div>
   );
 }

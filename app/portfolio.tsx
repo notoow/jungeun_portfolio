@@ -782,7 +782,7 @@ export default function Portfolio({
               </div>
               <div className="meadow-bottom">
                 <p className="meadow-index">
-                  <span>01 / THE GARDEN</span>여러 가지 작업, 저마다의 색.
+                  <span>01 / THE GARDEN</span>
                 </p>
                 <a href="#archive" className="meadow-enter">
                   <span>
@@ -791,6 +791,11 @@ export default function Portfolio({
                   <ArrowDown size={22} strokeWidth={1.4} />
                 </a>
               </div>
+              <p className="meadow-passage">
+                여러 가지 작업,
+                <br />
+                저마다의 색.
+              </p>
               <div className="meadow-transition" aria-hidden="true" />
             </div>
           </section>

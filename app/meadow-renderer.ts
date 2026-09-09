@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { assetPath } from '@/lib/portfolio';
 import { createAnimationLoop } from '@/lib/animation-loop';
+import { meadowJourney } from '@/lib/flower-motion';
+import { createMeadowFlowers } from './meadow-flowers';
 import type { MeadowInput } from './meadow-scene';
 
 export type MeadowRenderer = {
@@ -8,7 +10,7 @@ export type MeadowRenderer = {
   dispose: () => void;
 };
 
-/** Photo-based depth and a restrained wind displacement; no color-key cutouts. */
+/** Photograph in the distance, independent geometry and spring motion nearby. */
 export async function mountMeadowRenderer(
   container: HTMLElement,
   input: () => MeadowInput,
@@ -19,19 +21,36 @@ export async function mountMeadowRenderer(
   let renderer: THREE.WebGLRenderer;
   try {
     renderer = new THREE.WebGLRenderer({
-      antialias: false,
-      powerPreference: 'low-power',
+      antialias: true,
+      powerPreference: 'default',
     });
   } catch {
     return null;
   }
   renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.15;
+  renderer.autoClear = false;
   container.appendChild(renderer.domElement);
   const textures = new Map<string, THREE.Texture>();
   const loader = new THREE.TextureLoader();
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 2);
   camera.position.z = 1;
   const scene = new THREE.Scene();
+  const garden = new THREE.Scene();
+  garden.fog = new THREE.Fog('#c5d4ae', 12, 26);
+  const perspective = new THREE.PerspectiveCamera(46, 1, 0.1, 40);
+  perspective.position.set(0, 1.7, 10);
+  const sky = new THREE.HemisphereLight('#eaf4ff', '#708342', 2.4);
+  const sun = new THREE.DirectionalLight('#fff0d3', 2.8);
+  sun.position.set(-5, 8, 5);
+  const fill = new THREE.DirectionalLight('#e2f3ff', 0.65);
+  fill.position.set(5, 3, -2);
+  garden.add(sky, sun, fill);
+  const flowers = createMeadowFlowers(
+    garden,
+    window.matchMedia('(pointer: coarse)').matches || innerWidth < 800,
+  );
   const geometry = new THREE.PlaneGeometry(2, 2);
   const uniforms = {
     uImage: { value: null as THREE.Texture | null },
@@ -61,6 +80,7 @@ export async function mountMeadowRenderer(
       }`,
     depthWrite: false,
     depthTest: false,
+    toneMapped: false,
   });
   scene.add(new THREE.Mesh(geometry, material));
   let disposed = false,
@@ -77,22 +97,49 @@ export async function mountMeadowRenderer(
     '(max-width: 799px) and (orientation: portrait)',
   );
   const section = container.closest('.meadow-section');
+  const surface = container.closest<HTMLElement>('.meadow-sticky');
+  const view = new THREE.Vector2();
+  const targetView = new THREE.Vector2();
+  const lookAt = new THREE.Vector3();
+  const lastBrush = { x: 0, y: 0 };
+  const nextBrush = { x: 0, y: 0 };
+  let brushing = false;
   const animation = createAnimationLoop((elapsed) => {
     if (!uniforms.uImage.value || lost) return;
-    const delta = Math.min(50, Math.max(8, elapsed - previousTime));
+    const delta = Math.min(50, Math.max(0, elapsed - previousTime));
     previousTime = elapsed;
     const amount = 1 - Math.exp(-delta / 180);
     const point = motion() ? input() : { x: 0, y: 0 };
-    uniforms.uPointer.value.lerp(
-      new THREE.Vector2(point.x, point.y),
-      motion() ? amount : 1,
-    );
+    targetView.set(point.x, point.y);
+    view.lerp(targetView, motion() ? amount : 1);
+    uniforms.uPointer.value.copy(view);
     uniforms.uProgress.value +=
       ((motion() ? targetProgress : 0) - uniforms.uProgress.value) *
       (motion() ? amount : 1);
     uniforms.uTime.value = elapsed / 1000;
     uniforms.uMotion.value = motion() ? 1 : 0;
+    const journey = meadowJourney(uniforms.uProgress.value);
+    perspective.position.set(
+      view.x * 0.3,
+      1.7 - journey.travel * 0.34 + view.y * 0.13,
+      10 - journey.travel * 2.15,
+    );
+    lookAt.set(view.x * 0.08, 1.46 - journey.travel * 0.68, -1.5);
+    perspective.lookAt(lookAt);
+    perspective.rotation.z = -view.x * 0.017;
+    perspective.updateMatrixWorld();
+    flowers.update(
+      elapsed / 1000,
+      delta / 1000,
+      view,
+      journey.travel,
+      journey.open,
+      motion(),
+    );
+    renderer.clear();
     renderer.render(scene, camera);
+    renderer.clearDepth();
+    renderer.render(garden, perspective);
     if (!presented) {
       presented = true;
       onReady(true);
@@ -104,6 +151,7 @@ export async function mountMeadowRenderer(
     signal.removeEventListener('abort', dispose);
     animation.dispose();
     cleanListeners();
+    flowers.dispose();
     geometry.dispose();
     material.dispose();
     textures.forEach((texture) => texture.dispose());
@@ -171,10 +219,14 @@ export async function mountMeadowRenderer(
       ),
     );
     renderer.setSize(width, height, false);
+    perspective.aspect = width / height;
+    perspective.updateProjectionMatrix();
+    flowers.resize(width, height);
     cover();
     progress();
   }
   function visibility() {
+    if (!visible || document.hidden) brushing = false;
     animation.setVisible(visible && !document.hidden && !lost);
   }
   function contextLost(event: Event) {
@@ -188,6 +240,27 @@ export async function mountMeadowRenderer(
     lost = false;
     visibility();
     animation.invalidate();
+  }
+  function brush(event: PointerEvent) {
+    if (!motion() || !surface || !visible || lost) return;
+    if ((event.target as Element).closest('a, button, nav')) {
+      brushing = false;
+      return;
+    }
+    const rect = surface.getBoundingClientRect();
+    nextBrush.x = event.clientX - rect.left;
+    nextBrush.y = event.clientY - rect.top;
+    if (!brushing || event.type === 'pointerdown') {
+      lastBrush.x = nextBrush.x;
+      lastBrush.y = nextBrush.y;
+    }
+    flowers.stroke(lastBrush, nextBrush, perspective);
+    lastBrush.x = nextBrush.x;
+    lastBrush.y = nextBrush.y;
+    brushing = true;
+  }
+  function release() {
+    brushing = false;
   }
   const observer = new ResizeObserver(resize);
   const intersection = new IntersectionObserver(
@@ -205,6 +278,11 @@ export async function mountMeadowRenderer(
     portrait.removeEventListener('change', selectImage);
     renderer.domElement.removeEventListener('webglcontextlost', contextLost);
     renderer.domElement.removeEventListener('webglcontextrestored', restored);
+    surface?.removeEventListener('pointerdown', brush);
+    surface?.removeEventListener('pointermove', brush);
+    surface?.removeEventListener('pointerleave', release);
+    surface?.removeEventListener('pointerup', release);
+    surface?.removeEventListener('pointercancel', release);
   };
   observer.observe(container);
   intersection.observe(container);
@@ -213,10 +291,22 @@ export async function mountMeadowRenderer(
   portrait.addEventListener('change', selectImage);
   renderer.domElement.addEventListener('webglcontextlost', contextLost);
   renderer.domElement.addEventListener('webglcontextrestored', restored);
+  surface?.addEventListener('pointerdown', brush, { passive: true });
+  surface?.addEventListener('pointermove', brush, { passive: true });
+  surface?.addEventListener('pointerleave', release);
+  surface?.addEventListener('pointerup', release);
+  surface?.addEventListener('pointercancel', release);
   animation.setActive(motion());
   resize();
   await selectImage();
   return disposed
     ? null
-    : { setMotion: (value) => animation.setActive(value), dispose };
+    : {
+        setMotion: (value) => {
+          brushing = false;
+          progress();
+          animation.setActive(value);
+        },
+        dispose,
+      };
 }

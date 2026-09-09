@@ -202,7 +202,7 @@ button:disabled {
 }
 .meadow-section {
   position: relative;
-  height: 145svh;
+  height: 225svh;
   --journey: 0;
   background: #e4eee9;
 }
@@ -213,6 +213,7 @@ button:disabled {
   min-height: 620px;
   overflow: hidden;
   isolation: isolate;
+  touch-action: pan-y pinch-zoom;
 }
 .meadow-art,
 .meadow-photograph,
@@ -246,6 +247,37 @@ button:disabled {
 .meadow-art.is-ready .meadow-canvas {
   opacity: 1;
 }
+.meadow-touch-hint {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: 148px;
+  text-align: center;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 450;
+  text-shadow:
+    0 1px 8px #1b301b,
+    0 1px 24px #1b301b;
+  opacity: clamp(0, calc(1 - var(--journey) * 3.5), 1);
+}
+.meadow-touch-hint small {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  margin-top: 8px;
+}
+.meadow-hint-touch {
+  display: none;
+}
+@media (pointer: coarse) {
+  .meadow-hint-touch {
+    display: inline;
+  }
+  .meadow-hint-mouse {
+    display: none;
+  }
+}
 .meadow-copy {
   position: absolute;
   top: clamp(130px, 17svh, 210px);
@@ -253,7 +285,7 @@ button:disabled {
   right: var(--gutter);
   text-align: center;
   color: #273f31;
-  opacity: clamp(0, calc(1 - var(--journey) * 1.45), 1);
+  opacity: clamp(0, calc(1 - var(--journey) * 2.8), 1);
   transform: translateY(calc(var(--journey) * -46px));
 }
 .meadow-eyebrow {
@@ -336,8 +368,26 @@ button:disabled {
   inset: 0;
   z-index: 3;
   pointer-events: none;
-  background: linear-gradient(180deg, #f8f8f200, #f8f8f2 95%);
-  opacity: clamp(0, calc((var(--journey) - 0.18) * 1.5), 1);
+  background: linear-gradient(180deg, #f8f8f2a0, #f8f8f2 85%);
+  opacity: clamp(0, calc((var(--journey) - 0.7) * 3.5), 1);
+}
+.meadow-passage {
+  position: absolute;
+  top: 24%;
+  left: var(--gutter);
+  right: var(--gutter);
+  z-index: 4;
+  pointer-events: none;
+  text-align: center;
+  font-size: clamp(28px, 3vw, 44px);
+  line-height: 1.45;
+  font-weight: 450;
+  letter-spacing: -0.04em;
+  opacity: clamp(0, calc((var(--journey) - 0.3) * 4), 1);
+  transform: translateY(calc((1 - var(--journey)) * 24px));
+}
+.motion-off .meadow-passage {
+  display: none;
 }
 .archive-section {
   position: relative;
@@ -1178,6 +1228,9 @@ button:disabled {
 .motion-off .project-object {
   transform: none !important;
 }
+.motion-off .meadow-section {
+  height: 100svh;
+}
 @media (max-width: 1100px) {
   .archive-intro {
     gap: 32px;
@@ -1230,7 +1283,7 @@ button:disabled {
     width: 36px;
   }
   .meadow-section {
-    height: 135svh;
+    height: 205svh;
   }
   .meadow-copy {
     top: max(124px, 18svh);
