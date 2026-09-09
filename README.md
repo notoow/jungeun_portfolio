@@ -1,0 +1,54 @@
+# jungeun park — design archive
+
+파란 하늘, 구름, 잠든 아기에서 시작하는 박정은의 인터랙티브 디자인 포트폴리오입니다.
+
+사이트: https://notoow.github.io/jungeun_portfolio/
+
+## 구성
+
+- 원본 Adobe Portfolio의 61개 프로젝트를 로컬 이미지로 이전했습니다.
+- 3D 렌더 이미지에 Three.js의 원근 카메라, 곡면, 미세한 담요 호흡, 깊이가 다른 구름을 결합했습니다. 아기 자체는 관절을 가진 3D 모델이 아닌 렌더 이미지입니다.
+- 스크롤·마우스·지원 모바일 기기의 기울기에 반응하며, 움직임을 끄거나 운영체제의 동작 줄이기 설정을 따를 수 있습니다.
+- 긴 상세페이지는 기본 문서 스크롤로 읽습니다. 작은 전체 지도, 원래 탐색 위치 복귀, 연관 작업 이동을 제공합니다.
+- 독립된 소셜 광고는 카드 그리드와 확대 보기로 볼 수 있습니다.
+- 원본 애니메이션 38개를 움직이는 WebP로 변환했습니다. 정지 포스터도 함께 보관합니다.
+- Pretendard Variable을 직접 호스팅합니다. 글꼴 라이선스는 `public/fonts/OFL.txt`입니다.
+
+## 개발
+
+Node.js 22.13 이상을 사용합니다.
+
+```sh
+npm ci
+npm run dev
+```
+
+미리보기: `http://localhost:3000/jungeun_portfolio/`
+
+```sh
+npm run lint -- app lib main.tsx
+npm run build
+```
+
+React + Vite 정적 빌드이며 서버나 데이터베이스가 필요하지 않습니다. 결과물은 `dist/`에 생성되고 GitHub Actions가 Pages에 배포합니다. 주소의 하위 경로는 `vite.config.ts`, `lib/portfolio.ts`, `app/globals.css`에 설정되어 있습니다. 작품 주소는 `#work/프로젝트ID` 형식이므로 Pages에서 새로고침해도 경로 404가 발생하지 않습니다.
+
+## 작품 수정
+
+`public/data/projects.json`의 제목·연도·설명·분야·이미지 순서를 수정하고 `public/media/`에 이미지를 추가하세요. 원본에서 제공되지 않은 역할이나 성과는 임의로 작성하지 않았습니다. 일부 분야 분류는 탐색을 위한 편집입니다.
+
+원본을 다시 가져오려면 Python에 `requests`, `beautifulsoup4`, `Pillow`를 설치하고 순서대로 실행합니다.
+
+```sh
+python scripts/import-portfolio.py
+python scripts/finalize-assets.py
+python scripts/optimize-animations.py
+python scripts/clean-unused-media.py
+```
+
+원본 다운로드 캐시는 `.import-cache/`에 보관하며 Git에 포함하지 않습니다. 긴 이미지는 2400px 높이 단위로 나누어 지연 로딩합니다. 원본 영상 2개는 Adobe 플레이어에 연결됩니다.
+
+## 아트 자산 및 검증
+
+히어로의 아기와 구름은 built-in image_gen으로 생성했습니다. 최종 자산은 `public/hero/sleeping-baby.webp`, `public/hero/cloud.webp`이고 전체 생성 프롬프트는 `docs/image-prompts.md`에 기록했습니다. 포트폴리오 작품과 생성 히어로는 별개입니다.
+
+정적 빌드 검증은 61개 프로젝트의 누락, 미디어 경로, 글꼴, 히어로 자산과 생성된 JS/CSS 경로를 확인합니다. 모바일 센서의 권한·감도는 실제 기기에서도 확인하는 것이 좋습니다.
