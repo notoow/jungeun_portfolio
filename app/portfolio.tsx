@@ -35,6 +35,7 @@ import {
   type PortfolioImage,
 } from '@/lib/portfolio';
 import DreamScene, { type DreamInput } from './dream-scene';
+import ReaderOverview from './reader-overview';
 
 const featured = [
   'bi',
@@ -143,6 +144,8 @@ function ProjectReader({
   const progressBar = useRef<HTMLDivElement>(null);
   const [lightbox, setLightbox] = useState<number | null>(null);
   const [progress, setProgress] = useState(0);
+  const [activeSection, setActiveSection] = useState(0);
+  const [reading, setReading] = useState(false);
   const isCards =
     project.category === 'Social' &&
     project.images.every((img) => img.height / img.width < 1.7);
@@ -150,6 +153,15 @@ function ProjectReader({
     (n, img) => n + img.height / img.width,
     0,
   );
+  const sectionEnds = useMemo(() => {
+    let ratio = 0;
+    const ends: number[] = [];
+    for (const img of project.images) {
+      ratio += img.height / img.width;
+      ends.push(ratio / ratioTotal);
+    }
+    return ends;
+  }, [project, ratioTotal]);
   const related = useMemo(() => {
     const brand = project.title.startsWith('두렙')
       ? '두렙'
@@ -181,6 +193,23 @@ function ProjectReader({
         Math.max(0, -rect.top / Math.max(1, rect.height - window.innerHeight)),
       );
       setProgress(Math.round(p * 100));
+      if (!isCards) {
+        const headerHeight =
+          document.querySelector('.site-header')?.getBoundingClientRect()
+            .height || 80;
+        setReading(
+          rect.top < window.innerHeight - 120 &&
+            rect.bottom > headerHeight + 120,
+        );
+        const position = Math.max(
+          0,
+          (headerHeight + 24 - rect.top) / Math.max(1, rect.height),
+        );
+        const index = sectionEnds.findIndex((end) => position < end);
+        setActiveSection(
+          index < 0 ? Math.max(0, project.images.length - 1) : index,
+        );
+      }
       if (progressBar.current)
         progressBar.current.style.transform = `scaleX(${p})`;
       if (map.current) {
@@ -198,12 +227,15 @@ function ProjectReader({
     update();
     window.addEventListener('scroll', request, { passive: true });
     window.addEventListener('resize', request);
+    const resize = new ResizeObserver(request);
+    if (body.current) resize.observe(body.current);
     return () => {
       window.removeEventListener('scroll', request);
       window.removeEventListener('resize', request);
       cancelAnimationFrame(frame);
+      resize.disconnect();
     };
-  }, [project]);
+  }, [project, isCards, sectionEnds]);
   function jumpMap(event: React.MouseEvent<HTMLButtonElement>) {
     if (!body.current) return;
     const r = event.currentTarget.getBoundingClientRect();
@@ -284,6 +316,7 @@ function ProjectReader({
             ) : (
               <img
                 className="paper-section"
+                tabIndex={-1}
                 key={img.src}
                 src={displayImage(img, motion)}
                 width={img.width}
@@ -330,6 +363,17 @@ function ProjectReader({
           </aside>
         )}
       </div>
+      {!isCards && project.images.length > 1 && (
+        <ReaderOverview
+          images={project.images}
+          title={project.title}
+          body={body}
+          progress={progress}
+          active={activeSection}
+          motion={motion}
+          reading={reading}
+        />
+      )}
       {project.text.length > 0 && (
         <div className="project-notes">
           {project.text.map((text, i) => (
@@ -543,6 +587,7 @@ export default function Portfolio({
     };
     update();
     window.addEventListener('scroll', request, { passive: true });
+    window.addEventListener('resize', request);
     const pointer = (e: globalThis.PointerEvent) => {
       if (motion && !tilt && e.pointerType === 'mouse') {
         input.current = {
@@ -554,6 +599,7 @@ export default function Portfolio({
     window.addEventListener('pointermove', pointer, { passive: true });
     return () => {
       window.removeEventListener('scroll', request);
+      window.removeEventListener('resize', request);
       window.removeEventListener('pointermove', pointer);
       cancelAnimationFrame(frame);
     };

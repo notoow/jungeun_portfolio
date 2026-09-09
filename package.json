@@ -10,6 +10,7 @@
     "build": "tsc --noEmit && vite build && node scripts/validate-build.mjs",
     "start": "vite preview --host 127.0.0.1",
     "lint": "oxlint",
+    "test": "node --experimental-strip-types --test tests/*.test.mjs",
     "format": "oxfmt"
   },
   "dependencies": {

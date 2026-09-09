@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { assetPath } from '@/lib/portfolio';
+import { createAnimationLoop } from '@/lib/animation-loop';
 
 export type DreamInput = { x: number; y: number };
 
@@ -17,9 +18,11 @@ export default function DreamScene({
 }) {
   const host = useRef<HTMLDivElement>(null);
   const enabled = useRef(motion);
+  const loop = useRef<ReturnType<typeof createAnimationLoop> | null>(null);
   const [ready, setReady] = useState(false);
   useEffect(() => {
     enabled.current = motion;
+    loop.current?.setActive(motion);
   }, [motion]);
 
   useEffect(() => {
@@ -49,12 +52,18 @@ export default function DreamScene({
         camera.position.z = 8;
         const loader = new THREE.TextureLoader();
         const textures: InstanceType<typeof THREE.Texture>[] = [];
+        let abandoned = false;
+        const loadTexture = async (path: string) => {
+          const texture = await loader.loadAsync(assetPath(path));
+          if (stopped || abandoned) texture.dispose();
+          else textures.push(texture);
+          return texture;
+        };
         try {
           const [babyTexture, cloudTexture] = await Promise.all([
-            loader.loadAsync(assetPath('hero/sleeping-baby.webp')),
-            loader.loadAsync(assetPath('hero/cloud.webp')),
+            loadTexture('hero/sleeping-baby.webp'),
+            loadTexture('hero/cloud.webp'),
           ]);
-          textures.push(babyTexture, cloudTexture);
           if (stopped) {
             textures.forEach((t) => t.dispose());
             renderer.dispose();
@@ -117,12 +126,28 @@ export default function DreamScene({
             height = 1,
             worldWidth = 1,
             worldHeight = 1;
-          let frame = 0,
-            visible = true,
+          let visible = false,
+            contextLost = false,
+            presented = false,
             currentX = 0,
             currentY = 0,
             currentP = 0;
-          let dirty = true;
+          const section = container.closest(
+            '.dream-section',
+          ) as HTMLElement | null;
+          let targetP = 0;
+          const updateProgress = () => {
+            targetP = section
+              ? Math.max(
+                  0,
+                  Math.min(
+                    1,
+                    -section.getBoundingClientRect().top /
+                      Math.max(1, section.offsetHeight - height),
+                  ),
+                )
+              : 0;
+          };
           const resize = () => {
             width = container.clientWidth;
             height = container.clientHeight;
@@ -132,57 +157,39 @@ export default function DreamScene({
             camera.updateProjectionMatrix();
             worldHeight = 2 * Math.tan((35 * Math.PI) / 360) * 8;
             worldWidth = worldHeight * camera.aspect;
-            dirty = true;
+            updateProgress();
+            animation.invalidate();
           };
-          const ro = new ResizeObserver(resize);
-          ro.observe(container);
-          resize();
-          const io = new IntersectionObserver(
-            (entries) => {
-              visible = entries[0].isIntersecting;
-              dirty = true;
-            },
-            { rootMargin: '80px' },
-          );
-          io.observe(container);
           const onScroll = () => {
-            dirty = true;
+            updateProgress();
+            animation.invalidate();
           };
-          window.addEventListener('scroll', onScroll, { passive: true });
           const onContextLost = (event: Event) => {
             event.preventDefault();
+            contextLost = true;
+            presented = false;
+            animation.setVisible(false);
             setReady(false);
           };
-          renderer.domElement.addEventListener(
-            'webglcontextlost',
-            onContextLost,
-          );
-          const start = performance.now();
-          function draw(now: number) {
+          const syncVisibility = () => {
+            animation.setVisible(visible && !document.hidden && !contextLost);
+          };
+          const onContextRestored = () => {
+            contextLost = false;
+            syncVisibility();
+            animation.invalidate();
+          };
+          function draw(elapsed: number) {
             if (stopped) return;
-            frame = requestAnimationFrame(draw);
-            if (!visible || document.hidden) return;
             const animate = enabled.current;
-            if (!animate && !dirty) return;
-            dirty = false;
-            const section = container!.closest(
-              '.dream-section',
-            ) as HTMLElement | null;
-            const targetP =
-              animate && section
-                ? Math.max(
-                    0,
-                    Math.min(
-                      1,
-                      -section.getBoundingClientRect().top /
-                        Math.max(1, section.offsetHeight - height),
-                    ),
-                  )
-                : 0;
-            currentP += (targetP - currentP) * 0.08;
-            currentX += ((animate ? input.current.x : 0) - currentX) * 0.045;
-            currentY += ((animate ? input.current.y : 0) - currentY) * 0.045;
-            time.value = animate ? (now - start) / 1000 : 0;
+            if (animate) {
+              currentP += (targetP - currentP) * 0.08;
+              currentX += (input.current.x - currentX) * 0.045;
+              currentY += (input.current.y - currentY) * 0.045;
+            } else {
+              currentP = currentX = currentY = 0;
+            }
+            time.value = elapsed / 1000;
             const mobile = width < 800;
             const size = mobile
               ? Math.min(worldWidth * 1.14, worldHeight * 0.65)
@@ -218,17 +225,49 @@ export default function DreamScene({
               );
             });
             renderer.render(scene, camera);
+            if (!presented) {
+              presented = true;
+              setReady(true);
+            }
           }
-          frame = requestAnimationFrame(draw);
-          setReady(true);
+          const animation = createAnimationLoop(draw);
+          loop.current = animation;
+          animation.setActive(enabled.current);
+          const ro = new ResizeObserver(resize);
+          ro.observe(container);
+          resize();
+          const io = new IntersectionObserver(
+            (entries) => {
+              visible = entries[0].isIntersecting;
+              syncVisibility();
+            },
+            { rootMargin: '80px' },
+          );
+          io.observe(container);
+          window.addEventListener('scroll', onScroll, { passive: true });
+          document.addEventListener('visibilitychange', syncVisibility);
+          renderer.domElement.addEventListener(
+            'webglcontextlost',
+            onContextLost,
+          );
+          renderer.domElement.addEventListener(
+            'webglcontextrestored',
+            onContextRestored,
+          );
           cleanup = () => {
-            cancelAnimationFrame(frame);
+            animation.dispose();
+            if (loop.current === animation) loop.current = null;
             ro.disconnect();
             io.disconnect();
             window.removeEventListener('scroll', onScroll);
+            document.removeEventListener('visibilitychange', syncVisibility);
             renderer.domElement.removeEventListener(
               'webglcontextlost',
               onContextLost,
+            );
+            renderer.domElement.removeEventListener(
+              'webglcontextrestored',
+              onContextRestored,
             );
             geometry.dispose();
             cloudGeometry.dispose();
@@ -239,6 +278,8 @@ export default function DreamScene({
             renderer.domElement.remove();
           };
         } catch {
+          abandoned = true;
+          cleanup();
           textures.forEach((t) => t.dispose());
           renderer.dispose();
           renderer.domElement.remove();
