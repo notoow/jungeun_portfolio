@@ -34,10 +34,8 @@ for (const p of projects) {
 }
 await access(join(root, 'fonts/PretendardVariable.woff2'));
 await access(join(root, 'fonts/OFL.txt'));
-await access(join(root, 'hero/sleeping-baby.webp'));
-await access(join(root, 'hero/cloud.webp'));
-for (const layer of ['baby-layer', 'blanket-back', 'blanket-front'])
-  assert((await stat(join(root, `hero/${layer}.webp`))).size > 0);
+for (const composition of ['landscape', 'portrait'])
+  assert((await stat(join(root, `meadow/${composition}.webp`))).size > 0);
 console.log(
   `Static build verified: ${projects.length} projects, ${images} images, local font and hero assets.`,
 );

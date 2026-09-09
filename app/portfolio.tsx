@@ -6,7 +6,6 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
-  type CSSProperties,
   type PointerEvent,
 } from 'react';
 import {
@@ -35,7 +34,7 @@ import {
   type Project,
   type PortfolioImage,
 } from '@/lib/portfolio';
-import DreamScene, { type DreamInput } from './dream-scene';
+import MeadowScene, { type MeadowInput } from './meadow-scene';
 import ReaderOverview from './reader-overview';
 
 const featured = [
@@ -122,17 +121,12 @@ function ProjectCard({
       `${((event.clientX - bounds.left - bounds.width / 2) / bounds.width) * 6}deg`,
     );
   }
-  const style = {
-    '--paper-angle': `${[-2, 1.6, -1, 1, -1.8, 2][index % 6]}deg`,
-    '--reveal-delay': `${(index % 3) * 80}ms`,
-  } as CSSProperties;
   return (
     <a
-      className={`project-card ${project.category === 'Digital' ? 'is-paper' : project.category === 'Social' ? 'is-stack' : ''}`}
+      className="project-card"
       href={`#work/${project.id}`}
       aria-label={`${project.title} 펼쳐보기`}
       data-project-id={project.id}
-      style={style}
       onPointerMove={tilt}
       onPointerLeave={(event) => {
         event.currentTarget.style.setProperty('--card-rx', '0deg');
@@ -317,7 +311,7 @@ function ProjectReader({
         </a>
       </div>
       <header className="reader-heading">
-        <p className="eyebrow">A LITTLE PIECE OF MY WORLD</p>
+        <p className="eyebrow">PROJECT / {niceNumber(project.order + 1)}</p>
         <h1>{project.title}</h1>
         {project.description && (
           <p className="project-description">{project.description}</p>
@@ -525,7 +519,7 @@ export default function Portfolio({
   );
   const [status, setStatus] = useState('');
   const [scrolled, setScrolled] = useState(false);
-  const input = useRef<DreamInput>({ x: 0, y: 0 });
+  const input = useRef<MeadowInput>({ x: 0, y: 0 });
   const hero = useRef<HTMLElement>(null);
   const selectedRef = useRef<Project | null>(null);
   const homeScroll = useRef(0);
@@ -568,7 +562,7 @@ export default function Portfolio({
       } else {
         selectedRef.current = null;
         setSelected(null);
-        document.title = 'jungeun park — Little things, thoughtfully made.';
+        document.title = 'jungeun park — design archive';
         requestAnimationFrame(() => {
           if (window.location.hash === '#top') {
             window.scrollTo({ top: 0, behavior: 'instant' });
@@ -613,7 +607,8 @@ export default function Portfolio({
               0,
               Math.min(
                 1,
-                -r.top / (hero.current.offsetHeight - window.innerHeight),
+                -r.top /
+                  Math.max(1, hero.current.offsetHeight - window.innerHeight),
               ),
             )
           : 0;
@@ -770,43 +765,33 @@ export default function Portfolio({
       ) : (
         <main id="main-content">
           <section
-            className="dream-section"
+            className="meadow-section"
             ref={hero}
-            aria-label="작은 꿈에서 시작하는 디자인"
+            aria-label="꽃밭에서 시작하는 디자인 아카이브"
           >
-            <div className="dream-sticky">
-              <DreamScene motion={motion} input={input} />
-              <div className="hero-content">
-                <p className="hero-eyebrow">A LITTLE WORLD OF DESIGN</p>
-                <h1>
-                  Little things,
+            <div className="meadow-sticky">
+              <MeadowScene motion={motion} input={input} />
+              <div className="meadow-copy">
+                <p className="meadow-eyebrow">DESIGN ARCHIVE — 2017–2025</p>
+                <h1>jungeun park</h1>
+                <p className="meadow-description">
+                  작은 호기심으로 만든,
                   <br />
-                  <span>big dreams.</span>
-                </h1>
-                <p className="hero-description">
-                  아가가 세상을 처음 만나듯,
-                  <br />
-                  익숙한 것을 새로운 눈으로 바라봅니다.
+                  소중한 디자인들을 모았습니다.
                 </p>
-                <a className="hero-cta" href="#archive">
-                  나의 작업들 만나보기 <ArrowDown size={18} />
+              </div>
+              <div className="meadow-bottom">
+                <p className="meadow-index">
+                  <span>01 / THE GARDEN</span>여러 가지 작업, 저마다의 색.
+                </p>
+                <a href="#archive" className="meadow-enter">
+                  <span>
+                    작품 둘러보기 <small>{initialProjects.length} WORKS</small>
+                  </span>
+                  <ArrowDown size={22} strokeWidth={1.4} />
                 </a>
               </div>
-              <div className="dream-note">
-                <span className="tiny-dot" /> dreaming, softly.
-              </div>
-              <div className="hero-bottom">
-                <a href="#archive" className="scroll-invitation">
-                  <span>SCROLL TO WANDER</span>
-                  <ArrowDown size={17} />
-                </a>
-                <span>
-                  JUNGEUN PARK
-                  <br />
-                  DESIGN ARCHIVE
-                </span>
-              </div>
-              <div className="sky-transition" aria-hidden="true" />
+              <div className="meadow-transition" aria-hidden="true" />
             </div>
           </section>
           <section
@@ -816,20 +801,22 @@ export default function Portfolio({
           >
             <div className="archive-intro">
               <div>
-                <p className="eyebrow">THE THINGS I MAKE</p>
+                <p className="eyebrow">02 / THE COLLECTION</p>
                 <h2 id="archive-title">
-                  작은 것들에,
-                  <br />
-                  마음을 담아서<span>.</span>
+                  Works
+                  <span className="archive-count">
+                    ({initialProjects.length})
+                  </span>
                 </h2>
               </div>
-              <p>
-                색과 형태, 손끝에 닿는 작은 감각까지.
-                <br />
-                세상을 처음 만나는 호기심으로 관찰하고,
-                <br />
-                그 발견을 브랜드와 이미지, 경험으로 만듭니다.
-              </p>
+              <div className="archive-statement">
+                <p>서로 다른 색과 형태가 모여 하나의 풍경이 되듯.</p>
+                <p>
+                  브랜딩, 디지털, 일러스트레이션까지.
+                  <br />
+                  각자의 목적과 개성을 가진 작업들을 둘러보세요.
+                </p>
+              </div>
             </div>
             <Tabs
               value={category}
@@ -853,7 +840,9 @@ export default function Portfolio({
                     </TabsTrigger>
                   ))}
                 </TabsList>
-                <span className="archive-year">2017 — 2025</span>
+                <span className="archive-year">
+                  {niceNumber(visibleProjects.length)} WORKS
+                </span>
               </div>
               {categories.map((c) => (
                 <TabsContent key={c.id} value={c.id} className="archive-panel">
@@ -877,12 +866,8 @@ export default function Portfolio({
       <footer className="site-footer" id="contact">
         <div className="footer-top">
           <div>
-            <p className="eyebrow">LET&apos;S MAKE SOMETHING LOVELY</p>
-            <h2>
-              다음 이야기는,
-              <br />
-              함께 만들어요.
-            </h2>
+            <p className="eyebrow">03 / CONTACT</p>
+            <h2>함께 만들 일이 있다면.</h2>
           </div>
           <EmailContact />
         </div>
@@ -896,7 +881,7 @@ export default function Portfolio({
             Original archive <ArrowUpRight size={13} />
           </a>
           <a href="#top">
-            Back to the clouds <ArrowRight size={14} />
+            Back to the garden <ArrowRight size={14} />
           </a>
         </div>
       </footer>
